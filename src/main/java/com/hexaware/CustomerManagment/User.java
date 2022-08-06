@@ -1,8 +1,11 @@
 package com.hexaware.CustomerManagment;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import java.util.Date;
 
 @Entity
 public class User {
@@ -20,11 +23,26 @@ public class User {
     @NotBlank(message="role cannot be empty")
     private String role;
 
-    @NotNull
-    private boolean canDelete;
+    @CreationTimestamp
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "create_at")
+    private Date createdAt;
 
-    @NotNull
-    private boolean canUpdate;
+    @UpdateTimestamp
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "modify_date")
+    private Date updatedAt;
+
+    public User(){}
+    public User(long id,
+                String username,
+                String password,
+                String role) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.role = role;
+    }
 
     public long getId() {
         return id;
@@ -56,21 +74,5 @@ public class User {
 
     public void setRole(String role) {
         this.role = role;
-    }
-
-    public boolean isCanDelete() {
-        return canDelete;
-    }
-
-    public void setCanDelete(boolean canDelete) {
-        this.canDelete = canDelete;
-    }
-
-    public boolean isCanUpdate() {
-        return canUpdate;
-    }
-
-    public void setCanUpdate(boolean canUpdate) {
-        this.canUpdate = canUpdate;
     }
 }

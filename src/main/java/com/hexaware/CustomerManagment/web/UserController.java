@@ -36,7 +36,7 @@ public class UserController {
 
     @PatchMapping("/update/{userId}")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public User updateUser(@PathVariable long id, @RequestBody User updatedUser) {
+    public User updateUser(@PathVariable Long id, @RequestBody User updatedUser) {
         User oldUser = userService.findUserById(id).get();
 
         if(oldUser.getUsername() != null) {
@@ -48,15 +48,13 @@ public class UserController {
         if(oldUser.getRole() != null){
             oldUser.setRole(updatedUser.getRole());
         }
-        oldUser.setCanUpdate(updatedUser.isCanUpdate());
-        oldUser.setCanDelete(updatedUser.isCanDelete());
 
         return userService.saveUser(oldUser);
     }
 
     @DeleteMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteUser(@PathVariable("userId") long userId) {
+    public void deleteUser(@PathVariable("userId") Long userId) {
         try {
             userService.deleteUserById(userId);
         } catch (EmptyResultDataAccessException e) {}
