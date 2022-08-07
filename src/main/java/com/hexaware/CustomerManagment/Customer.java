@@ -98,4 +98,6 @@ public class Customer {
     public void setBalance(int balance) {
         this.balance = balance;
     }
+
+
 }
