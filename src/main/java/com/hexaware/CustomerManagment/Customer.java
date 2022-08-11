@@ -4,6 +4,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import javax.persistence.*;
+import javax.validation.constraints.Email;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -14,7 +15,6 @@ public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
-
     @NotBlank(message="firstname must be provided")
     private String firstName;
 
@@ -24,6 +24,7 @@ public class Customer {
     @NotBlank(message="address must be provided")
     private String address;
 
+    @Email
     @NotBlank(message="email must be provided")
     private String email;
 
@@ -41,14 +42,24 @@ public class Customer {
     @Column(name = "modify_date")
     private Date updatedAt;
 
+    @ManyToOne(cascade = CascadeType.MERGE)
+    private User user;
+
     public Customer() {}
-    public Customer(long id, String firstName, String lastName, String address, String email, int balance) {
+    public Customer(long id,
+                    String firstName,
+                    String lastName,
+                    String address,
+                    String email,
+                    int balance,
+                    User user) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.address = address;
         this.email = email;
         this.balance = balance;
+        this.user = user;
     }
 
     public long getId() {
@@ -99,5 +110,11 @@ public class Customer {
         this.balance = balance;
     }
 
+    public User getUser() {
+        return user;
+    }
 
+    public void setUser(User user) {
+        this.user = user;
+    }
 }
