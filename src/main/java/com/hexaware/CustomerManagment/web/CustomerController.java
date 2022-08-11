@@ -1,6 +1,7 @@
 package com.hexaware.CustomerManagment.web;
 
 import com.hexaware.CustomerManagment.Customer;
+import com.hexaware.CustomerManagment.User;
 import com.hexaware.CustomerManagment.service.CustomerService;
 import com.hexaware.CustomerManagment.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,10 +47,10 @@ public class CustomerController {
 
         }
         catch(EntityNotFoundException ex) {
-            LOGGER.info("Exception: " + ex);
+            LOGGER.error("Exception: " + ex);
         }
         catch (Exception e) {
-            LOGGER.info("Exception: " + e);
+            LOGGER.error("Exception: " + e);
 
         }
         return new ResponseEntity<>(null, HttpStatus.NOT_FOUND );
@@ -62,7 +63,7 @@ public class CustomerController {
             return new ResponseEntity<>(customerService.findAllCustomers(), HttpStatus.ACCEPTED);
         }
         catch (Exception e) {
-            LOGGER.info("Exception: " + e);
+            LOGGER.error("Exception: " + e);
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
     }
@@ -80,7 +81,7 @@ public class CustomerController {
 
             return new ResponseEntity<List<Customer>>(filteredCustomers, HttpStatus.ACCEPTED);
         } catch (Exception e) {
-            LOGGER.info("Exception: " + e);
+            LOGGER.error("Exception: " + e);
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
     }
@@ -88,10 +89,11 @@ public class CustomerController {
     @PostMapping(path="/create", consumes="application/json")
     public ResponseEntity<Customer> createCustomer(@Validated @RequestBody Customer customer,
                                                    BindingResult errors,
-                                                   @RequestHeader(value = "username") String userName) {
+                                                   @RequestHeader(value = "username") String userName,
+                                                   @RequestHeader(value="password") String password) {
         HashMap<String, String> errorsList = customerService.validateFields(errors);
-
-        if(userService.findByUsername(userName).isPresent()) {
+        Optional<User> userOpt = userService.findByUsername(userName);
+        if(userOpt.isPresent() && userOpt.get().getPassword().equals(password)) {
             if (!errorsList.isEmpty()) {
                 return new ResponseEntity(errorsList, HttpStatus.BAD_REQUEST);
             }
@@ -101,10 +103,10 @@ public class CustomerController {
                 return new ResponseEntity<>(customerService.saveCustomer(customer), HttpStatus.CREATED);
             }
             catch(IllegalArgumentException e) {
-                LOGGER.info("Exception: " + e);
+                LOGGER.error("Exception: " + e);
             }
             catch (Exception e) {
-                LOGGER.info("Exception: " + e);
+                LOGGER.error("Exception: " + e);
                 return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
@@ -116,11 +118,13 @@ public class CustomerController {
     public ResponseEntity updateCustomer(@PathVariable("customerId") Long customerId,
                                    @Validated @RequestBody Customer customerUpdate,
                                    BindingResult errors,
-                                         @RequestHeader(value = "username") String userName) {
+                                         @RequestHeader(value = "username") String userName,
+                                         @RequestHeader(value="password") String password) {
 
 
         HashMap<String, String> errorsList = customerService.validateFields(errors);
-        if(userService.findByUsername(userName).isPresent()) {
+        Optional<User> userOpt = userService.findByUsername(userName);
+        if(userOpt.isPresent() && userOpt.get().getPassword().equals(password)) {
             if(!errorsList.isEmpty()) {
                 return new ResponseEntity(errorsList, HttpStatus.BAD_REQUEST);
             }
@@ -151,7 +155,7 @@ public class CustomerController {
                 LOGGER.info("Exception: " + ex);
             }
             catch (Exception e) {
-                LOGGER.info("Exception: " + e);
+                LOGGER.error("Exception: " + e);
                 return new ResponseEntity(null, HttpStatus.BAD_REQUEST);
             }
         }
@@ -162,17 +166,19 @@ public class CustomerController {
     @DeleteMapping("/{customerId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteCustomer(@PathVariable("customerId") Long customerId,
-                               @RequestHeader(value = "username") String userName) {
-        if(userService.findByUsername(userName).isPresent()) {
+                               @RequestHeader(value = "username") String userName,
+                               @RequestHeader(value="password") String password) {
+        Optional<User> userOpt = userService.findByUsername(userName);
+        if(userOpt.isPresent() && userOpt.get().getPassword().equals(password)) {
             try {
                 LOGGER.info("Deleting a customer");
                 customerService.deleteCustomerById(customerId);
             }
             catch(EntityNotFoundException ex) {
-                LOGGER.info("Exception: " + ex);
+                LOGGER.error("Exception: " + ex);
             }
             catch (EmptyResultDataAccessException e) {
-                LOGGER.info("Exception: " + e);
+                LOGGER.error("Exception: " + e);
             }
         }
     }

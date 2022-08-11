@@ -5,7 +5,6 @@ import com.hexaware.CustomerManagment.User;
 import com.hexaware.CustomerManagment.service.UserService;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -40,10 +39,10 @@ public class UserController {
             }
         }
         catch(EntityNotFoundException ex) {
-            LOGGER.info("Exception: " + ex);
+            LOGGER.error("Exception: " + ex);
         }
         catch (Exception e) {
-            LOGGER.info("Exception: " + e);
+            LOGGER.error("Exception: " + e);
 
         }
         return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
@@ -55,7 +54,7 @@ public class UserController {
             return new ResponseEntity<>(userService.findAllUsers(), HttpStatus.ACCEPTED);
         }
         catch (Exception e) {
-            LOGGER.info("Exception: " + e);
+            LOGGER.error("Exception: " + e);
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
     }
@@ -63,24 +62,28 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<User> register(@Validated @RequestBody User user,
                                          BindingResult errors,
-                                         @RequestHeader(value = "username") String userName ) {
+                                         @RequestHeader(value = "username") String userName,
+                                         @RequestHeader(value = "password") String password) {
         HashMap<String, String> errorsList = userService.validateFields(errors);
-        if(!errorsList.isEmpty()) {
-            return new ResponseEntity(errorsList, HttpStatus.BAD_REQUEST);
-        }
+        Optional<User> userOpt = userService.findByUsername(userName);
 
-        LOGGER.info(userService.findByUsername(userName).get().getRole());
-        if(userService.findByUsername(userName).isPresent()){
+        if(userOpt.isPresent()
+                && userOpt.get().getPassword().equals(password)
+                && userOpt.get().getRole().equals("admin")
+        ){
+            if(!errorsList.isEmpty()) {
+                return new ResponseEntity(errorsList, HttpStatus.BAD_REQUEST);
+            }
 
             try {
                 LOGGER.info("Creating new user");
                 return new ResponseEntity<>(userService.saveUser(user), HttpStatus.CREATED);
             }
             catch(IllegalArgumentException e) {
-                LOGGER.info("Exception: " + e);
+                LOGGER.error("Exception: " + e);
             }
             catch(Exception e) {
-                LOGGER.info("Exception: " + e);
+                LOGGER.error("Exception: " + e);
                 return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
