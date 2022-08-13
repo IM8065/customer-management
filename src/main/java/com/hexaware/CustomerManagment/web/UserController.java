@@ -12,12 +12,12 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.persistence.EntityNotFoundException;
+import javax.persistence.NoResultException;
 
 @RestController
 @RequestMapping(path="/api/auth", produces={"application/json", "text/xml"})
@@ -30,108 +30,85 @@ public class UserController {
     private static Logger LOGGER = LoggerFactory.getLogger(UserController.class);
 
     @PostMapping("/login")
-    public ResponseEntity<User> authenticateUser(@RequestBody Login login)  {
+    public ResponseEntity authenticateUser(@RequestBody Login login) {
+        LOGGER.info("Entering authenticateUser()");
+        HashMap<String, String> errorsList = new HashMap<>();
         try {
             LOGGER.info("Authenticating User");
             Optional<User> foundUser = userService.findByUsername(login.getUsername());
-            if(foundUser.isPresent()) {
+            if (foundUser.isPresent()) {
                 return new ResponseEntity<>(foundUser.get(), HttpStatus.ACCEPTED);
             }
-        }
-        catch(EntityNotFoundException ex) {
+        } catch (EntityNotFoundException ex) {
             LOGGER.error("Exception: " + ex);
-        }
-        catch (Exception e) {
+            errorsList.put("message", "could not find user: " + login.getUsername());
+            errorsList.put("status", HttpStatus.NOT_FOUND.toString());
+            return new ResponseEntity(errorsList, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
             LOGGER.error("Exception: " + e);
-
+            errorsList.put("message", "There was a problem authenticating user: " + login.getUsername());
+            errorsList.put("status", HttpStatus.INTERNAL_SERVER_ERROR.toString());
+            return new ResponseEntity(errorsList, HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        LOGGER.info("Exiting authenticateUser()");
+        errorsList.put("message", "Was not able to find user with username: " + login.getUsername());
+        errorsList.put("status", HttpStatus.NOT_FOUND.toString());
+        return new ResponseEntity<>(errorsList, HttpStatus.NOT_FOUND);
     }
+
     @GetMapping("/list")
-    public ResponseEntity<List<User>> getAllUsers() {
+    public ResponseEntity getAllUsers() {
+        LOGGER.info("Entering getAllUsers()");
+        HashMap<String, String> errorsList = new HashMap<>();
         try {
             LOGGER.info("Getting all users");
             return new ResponseEntity<>(userService.findAllUsers(), HttpStatus.ACCEPTED);
-        }
-        catch (Exception e) {
+        } catch (NoResultException e) {
             LOGGER.error("Exception: " + e);
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+            errorsList.put("message", "Could not find any users");
+            errorsList.put("status", HttpStatus.NOT_FOUND.toString());
+            return new ResponseEntity<>(errorsList, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            LOGGER.error("Exception: " + e);
+            LOGGER.info("Exiting getAllUsers()");
+            errorsList.put("message", "There was an error finding users: " + e);
+            errorsList.put("status", HttpStatus.INTERNAL_SERVER_ERROR.toString());
+            return new ResponseEntity<>(errorsList, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @PostMapping("/register")
-    public ResponseEntity<User> register(@Validated @RequestBody User user,
-                                         BindingResult errors,
-                                         @RequestHeader(value = "username") String userName,
-                                         @RequestHeader(value = "password") String password) {
+    public ResponseEntity register(@Validated @RequestBody User user,
+                                   BindingResult errors,
+                                   @RequestHeader(value = "username") String userName,
+                                   @RequestHeader(value = "password") String password) {
+        LOGGER.info("Entering register()");
         HashMap<String, String> errorsList = userService.validateFields(errors);
         Optional<User> userOpt = userService.findByUsername(userName);
 
-        if(userOpt.isPresent()
+        if (userOpt.isPresent()
                 && userOpt.get().getPassword().equals(password)
                 && userOpt.get().getRole().equals("admin")
-        ){
-            if(!errorsList.isEmpty()) {
+        ) {
+            if (!errorsList.isEmpty()) {
+                errorsList.put("status", HttpStatus.BAD_REQUEST.toString());
                 return new ResponseEntity(errorsList, HttpStatus.BAD_REQUEST);
             }
 
             try {
                 LOGGER.info("Creating new user");
                 return new ResponseEntity<>(userService.saveUser(user), HttpStatus.CREATED);
-            }
-            catch(IllegalArgumentException e) {
+            } catch (Exception e) {
                 LOGGER.error("Exception: " + e);
-            }
-            catch(Exception e) {
-                LOGGER.error("Exception: " + e);
-                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+                errorsList.put("message", "You are not Authorized to perform this action");
+                errorsList.put("status", HttpStatus.INTERNAL_SERVER_ERROR.toString());
+                return new ResponseEntity<>(errorsList, HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
-        return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        LOGGER.info("Exiting register()");
+        errorsList.put("message", "You are not Authorized to perform this action");
+        errorsList.put("status", HttpStatus.UNAUTHORIZED.toString());
+        return new ResponseEntity<>(errorsList, HttpStatus.UNAUTHORIZED);
     }
 
-//    @PatchMapping("/update/{userId}")
-//    @ResponseStatus(HttpStatus.ACCEPTED)
-//    public ResponseEntity<User> updateUser(@PathVariable Long id,
-//                           @Validated @RequestBody User updatedUser,
-//                           BindingResult errors) {
-//
-//        HashMap<String, String> errorsList = userService.validateFields(errors);
-//
-//        if(!errorsList.isEmpty()) {
-//            return new ResponseEntity(errorsList, HttpStatus.BAD_REQUEST);
-//        }
-//
-//        try {
-//            logger.info("Updating a user by ID");
-//            User oldUser = userService.findUserById(id).get();
-//
-//            if(oldUser.getUsername() != null) {
-//                oldUser.setUsername(updatedUser.getUsername());
-//            }
-//            if(oldUser.getPassword() != null){
-//                oldUser.setPassword(updatedUser.getPassword());
-//            }
-//            if(oldUser.getRole() != null){
-//                oldUser.setRole(updatedUser.getRole());
-//            }
-//
-//            return new ResponseEntity<>(userService.saveUser(oldUser), HttpStatus.ACCEPTED);
-//        }
-//        catch (Exception e) {
-//            logger.info("Exception: " + e);
-//            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-//        }
-//    }
-
-//    @DeleteMapping("/{userId}")
-//    @ResponseStatus(HttpStatus.NO_CONTENT)
-//    public void deleteUser(@PathVariable("userId") Long userId) {
-//        try {
-//            logger.info("Deleting User");
-//            userService.deleteUserById(userId);
-//        } catch (EmptyResultDataAccessException e) {
-//            logger.info("Exception: " + e);
-//        }
-//    }
 }
